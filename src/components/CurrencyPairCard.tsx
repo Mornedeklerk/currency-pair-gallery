@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { ChevronDown, ChevronUp, X } from "lucide-react";
+import { ChevronDown, ChevronUp, X, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "./ui/button";
 
 interface CurrencyPairCardProps {
   onDelete: () => void;
@@ -9,11 +10,15 @@ interface CurrencyPairCardProps {
 export const CurrencyPairCard = ({ onDelete }: CurrencyPairCardProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [currencyPair, setCurrencyPair] = useState("");
-  const [images, setImages] = useState<string[]>([
-    "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&w=800&q=80",
-    "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&w=800&q=80",
-    "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80",
-  ]);
+  const [images, setImages] = useState<string[]>([]);
+
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files) return;
+
+    const newImages = Array.from(files).map((file) => URL.createObjectURL(file));
+    setImages((prevImages) => [...prevImages, ...newImages]);
+  };
 
   return (
     <div className="animate-fade-in">
@@ -64,6 +69,30 @@ export const CurrencyPairCard = ({ onDelete }: CurrencyPairCardProps) => {
 
         {isExpanded && (
           <div className="p-6 pt-0 animate-fade-in">
+            <div className="mb-4">
+              <label
+                htmlFor="image-upload"
+                className="cursor-pointer inline-block"
+              >
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Upload size={16} />
+                  Upload Images
+                </Button>
+              </label>
+              <input
+                id="image-upload"
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={handleImageUpload}
+                onClick={(e) => e.stopPropagation()}
+              />
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {images.map((image, index) => (
                 <div
