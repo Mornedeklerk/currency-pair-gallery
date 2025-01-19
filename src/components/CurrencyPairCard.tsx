@@ -18,12 +18,20 @@ export const CurrencyPairCard = ({ onDelete }: CurrencyPairCardProps) => {
 
   const handleSavePair = async () => {
     if (!currencyPair) return;
-    const id = saveCurrencyPair(currencyPair);
-    setPairId(id as number);
-    toast({
-      title: "Success",
-      description: "Currency pair saved successfully",
-    });
+    try {
+      const id = await saveCurrencyPair(currencyPair);
+      setPairId(id);
+      toast({
+        title: "Success",
+        description: "Currency pair saved successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save currency pair",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
