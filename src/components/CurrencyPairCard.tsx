@@ -10,20 +10,28 @@ interface CurrencyPairCardProps {
 }
 
 export const CurrencyPairCard = ({ onDelete }: CurrencyPairCardProps) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
   const [currencyPair, setCurrencyPair] = useState("");
   const [images, setImages] = useState<string[]>([]);
   const [pairId, setPairId] = useState<number | null>(null);
   const { toast } = useToast();
 
   const handleSavePair = async () => {
-    if (!currencyPair) return;
+    if (!currencyPair) {
+      toast({
+        title: "Error",
+        description: "Please enter a currency pair first",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     try {
       const id = await saveCurrencyPair(currencyPair);
       setPairId(id);
       toast({
         title: "Success",
-        description: "Currency pair saved successfully",
+        description: "Currency pair saved successfully. You can now upload images!",
       });
     } catch (error) {
       toast({
@@ -43,7 +51,6 @@ export const CurrencyPairCard = ({ onDelete }: CurrencyPairCardProps) => {
         const blob = new Blob([await file.arrayBuffer()]);
         await saveImage(pairId, blob);
         
-        // Create URL for preview
         const imageUrl = URL.createObjectURL(file);
         setImages((prev) => [...prev, imageUrl]);
       }
@@ -81,14 +88,10 @@ export const CurrencyPairCard = ({ onDelete }: CurrencyPairCardProps) => {
         className={cn(
           "bg-white rounded-xl shadow-sm border border-gray-100",
           "transition-all duration-300 ease-in-out",
-          "hover:shadow-md cursor-pointer",
-          isExpanded && "shadow-md"
+          "hover:shadow-md"
         )}
       >
-        <div
-          className="p-6 flex items-center justify-between"
-          onClick={() => setIsExpanded(!isExpanded)}
-        >
+        <div className="p-6 flex items-center justify-between">
           <div className="flex items-center gap-4 flex-1">
             <input
               type="text"
@@ -100,16 +103,12 @@ export const CurrencyPairCard = ({ onDelete }: CurrencyPairCardProps) => {
                 "placeholder:text-gray-400 transition-colors",
                 "focus:placeholder:text-gray-500"
               )}
-              onClick={(e) => e.stopPropagation()}
             />
             {!pairId && (
               <Button
                 variant="outline"
                 size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleSavePair();
-                }}
+                onClick={handleSavePair}
               >
                 Save
               </Button>
@@ -117,10 +116,7 @@ export const CurrencyPairCard = ({ onDelete }: CurrencyPairCardProps) => {
           </div>
           <div className="flex items-center gap-4">
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete();
-              }}
+              onClick={onDelete}
               className={cn(
                 "p-2 rounded-full transition-colors",
                 "hover:bg-gray-100 text-gray-500 hover:text-gray-700"
@@ -128,64 +124,77 @@ export const CurrencyPairCard = ({ onDelete }: CurrencyPairCardProps) => {
             >
               <X size={20} />
             </button>
-            {isExpanded ? (
-              <ChevronUp className="text-gray-400" />
-            ) : (
-              <ChevronDown className="text-gray-400" />
-            )}
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className={cn(
+                "p-2 rounded-full transition-colors",
+                "hover:bg-gray-100 text-gray-500 hover:text-gray-700"
+              )}
+            >
+              {isExpanded ? (
+                <ChevronUp className="text-gray-400" />
+              ) : (
+                <ChevronDown className="text-gray-400" />
+              )}
+            </button>
           </div>
         </div>
 
         {isExpanded && (
           <div className="p-6 pt-0 animate-fade-in">
-            {pairId && (
-              <div className="mb-4">
-                <label
-                  htmlFor="image-upload"
-                  className="cursor-pointer inline-block"
-                >
-                  <Button
-                    variant="outline"
-                    className="gap-2"
-                    onClick={(e) => e.stopPropagation()}
+            {pairId ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <label
+                    htmlFor="image-upload"
+                    className="cursor-pointer inline-block"
                   >
-                    <Upload size={16} />
-                    Upload Images
-                  </Button>
-                </label>
-                <input
-                  id="image-upload"
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                  onChange={handleImageUpload}
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </div>
-            )}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {images.map((image, index) => (
-                <div
-                  key={index}
-                  className={cn(
-                    "aspect-video rounded-lg overflow-hidden",
-                    "bg-gray-100 relative group"
-                  )}
-                >
-                  <img
-                    src={image}
-                    alt={`Currency pair image ${index + 1}`}
-                    className={cn(
-                      "w-full h-full object-cover",
-                      "transition-transform duration-300",
-                      "group-hover:scale-105"
-                    )}
-                    loading="lazy"
+                    <Button
+                      variant="outline"
+                      className="gap-2"
+                    >
+                      <Upload size={16} />
+                      Upload Images
+                    </Button>
+                  </label>
+                  <input
+                    id="image-upload"
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={handleImageUpload}
                   />
                 </div>
-              ))}
-            </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {images.map((image, index) => (
+                    <div
+                      key={index}
+                      className={cn(
+                        "aspect-video rounded-lg overflow-hidden",
+                        "bg-gray-100 relative group"
+                      )}
+                    >
+                      <img
+                        src={image}
+                        alt={`Currency pair image ${index + 1}`}
+                        className={cn(
+                          "w-full h-full object-cover",
+                          "transition-transform duration-300",
+                          "group-hover:scale-105"
+                        )}
+                        loading="lazy"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center text-gray-500 py-4">
+                Save the currency pair to enable image uploads
+              </div>
+            )}
           </div>
         )}
       </div>

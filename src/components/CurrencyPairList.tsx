@@ -16,14 +16,20 @@ export const CurrencyPairList = () => {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
-      <div className="space-y-4">
-        {cards.map((_, index) => (
-          <CurrencyPairCard
-            key={index}
-            onDelete={() => removeCard(index)}
-          />
-        ))}
-      </div>
+      {cards.length === 0 ? (
+        <div className="text-center text-gray-500 mb-4">
+          Click the button below to add your first currency pair
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {cards.map((_, index) => (
+            <CurrencyPairCard
+              key={index}
+              onDelete={() => removeCard(index)}
+            />
+          ))}
+        </div>
+      )}
       
       <button
         onClick={addCard}
