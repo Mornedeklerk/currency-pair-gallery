@@ -2,6 +2,7 @@ import { Upload } from "lucide-react";
 import { Button } from "./ui/button";
 import { saveImage } from "@/lib/db";
 import { useToast } from "@/hooks/use-toast";
+import { useRef } from "react";
 
 interface ImageUploaderProps {
   pairId: number;
@@ -10,6 +11,7 @@ interface ImageUploaderProps {
 
 export const ImageUploader = ({ pairId, onImageUpload }: ImageUploaderProps) => {
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -61,15 +63,18 @@ export const ImageUploader = ({ pairId, onImageUpload }: ImageUploaderProps) => 
     }
   };
 
+  const handleButtonClick = () => {
+    fileInputRef.current?.click();
+  };
+
   return (
     <div className="flex items-center gap-4">
-      <label htmlFor="image-upload" className="cursor-pointer inline-block">
-        <Button variant="outline" className="gap-2">
-          <Upload size={16} />
-          Upload Images
-        </Button>
-      </label>
+      <Button variant="outline" className="gap-2" onClick={handleButtonClick}>
+        <Upload size={16} />
+        Upload Images
+      </Button>
       <input
+        ref={fileInputRef}
         id="image-upload"
         type="file"
         accept="image/*"
