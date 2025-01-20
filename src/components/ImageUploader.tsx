@@ -13,7 +13,7 @@ export const ImageUploader = ({ pairId, onImageUpload }: ImageUploaderProps) => 
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (!files) {
+    if (!files || files.length === 0) {
       console.log("No files selected");
       return;
     }
@@ -22,12 +22,29 @@ export const ImageUploader = ({ pairId, onImageUpload }: ImageUploaderProps) => 
       console.log("Starting image upload for pairId:", pairId);
       for (const file of Array.from(files)) {
         console.log("Processing file:", file.name);
-        const blob = new Blob([await file.arrayBuffer()]);
-        await saveImage(pairId, blob);
-        console.log("Image saved to DB");
         
-        const imageUrl = URL.createObjectURL(file);
-        onImageUpload(imageUrl);
+        // Convert file to blob
+        const fileReader = new FileReader();
+        fileReader.onload = async (e) => {
+          if (!e.target?.result) {
+            console.error("Failed to read file");
+            return;
+          }
+
+          const arrayBuffer = e.target.result as ArrayBuffer;
+          const blob = new Blob([arrayBuffer], { type: file.type });
+          
+          // Save to IndexedDB
+          await saveImage(pairId, blob);
+          console.log("Image saved to DB");
+          
+          // Create URL for preview
+          const imageUrl = URL.createObjectURL(blob);
+          onImageUpload(imageUrl);
+          console.log("Image URL created:", imageUrl);
+        };
+
+        fileReader.readAsArrayBuffer(file);
       }
 
       toast({
