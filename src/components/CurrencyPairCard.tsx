@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
-import { ChevronDown, ChevronUp, X, Upload } from "lucide-react";
+import { ChevronDown, ChevronUp, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
-import { saveCurrencyPair, saveImage, getImagesForPair } from "@/lib/db";
+import { saveCurrencyPair, getImagesForPair } from "@/lib/db";
 import { useToast } from "@/hooks/use-toast";
+import { ImageUploader } from "./ImageUploader";
+import { ImageGallery } from "./ImageGallery";
 
 interface CurrencyPairCardProps {
   onDelete: () => void;
@@ -45,37 +47,8 @@ export const CurrencyPairCard = ({ onDelete }: CurrencyPairCardProps) => {
     }
   };
 
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files || !pairId) {
-      console.log("No files selected or no pairId");
-      return;
-    }
-
-    try {
-      console.log("Starting image upload for pairId:", pairId);
-      for (const file of Array.from(files)) {
-        console.log("Processing file:", file.name);
-        const blob = new Blob([await file.arrayBuffer()]);
-        await saveImage(pairId, blob);
-        console.log("Image saved to DB");
-        
-        const imageUrl = URL.createObjectURL(file);
-        setImages((prev) => [...prev, imageUrl]);
-      }
-
-      toast({
-        title: "Success",
-        description: "Images uploaded successfully",
-      });
-    } catch (error) {
-      console.error("Error uploading images:", error);
-      toast({
-        title: "Error",
-        description: "Failed to upload images",
-        variant: "destructive",
-      });
-    }
+  const handleImageUploaded = (imageUrl: string) => {
+    setImages((prev) => [...prev, imageUrl]);
   };
 
   useEffect(() => {
@@ -100,13 +73,11 @@ export const CurrencyPairCard = ({ onDelete }: CurrencyPairCardProps) => {
 
   return (
     <div className="animate-fade-in">
-      <div
-        className={cn(
-          "bg-white rounded-xl shadow-sm border border-gray-100",
-          "transition-all duration-300 ease-in-out",
-          "hover:shadow-md"
-        )}
-      >
+      <div className={cn(
+        "bg-white rounded-xl shadow-sm border border-gray-100",
+        "transition-all duration-300 ease-in-out",
+        "hover:shadow-md"
+      )}>
         <div className="p-6 flex items-center justify-between">
           <div className="flex items-center gap-4 flex-1">
             <input
@@ -121,11 +92,7 @@ export const CurrencyPairCard = ({ onDelete }: CurrencyPairCardProps) => {
               )}
             />
             {!pairId && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSavePair}
-              >
+              <Button variant="outline" size="sm" onClick={handleSavePair}>
                 Save
               </Button>
             )}
@@ -160,51 +127,8 @@ export const CurrencyPairCard = ({ onDelete }: CurrencyPairCardProps) => {
           <div className="p-6 pt-0 animate-fade-in">
             {pairId ? (
               <div className="space-y-4">
-                <div className="flex items-center gap-4">
-                  <label
-                    htmlFor="image-upload"
-                    className="cursor-pointer inline-block"
-                  >
-                    <Button
-                      variant="outline"
-                      className="gap-2"
-                    >
-                      <Upload size={16} />
-                      Upload Images
-                    </Button>
-                  </label>
-                  <input
-                    id="image-upload"
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    className="hidden"
-                    onChange={handleImageUpload}
-                  />
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {images.map((image, index) => (
-                    <div
-                      key={index}
-                      className={cn(
-                        "aspect-video rounded-lg overflow-hidden",
-                        "bg-gray-100 relative group"
-                      )}
-                    >
-                      <img
-                        src={image}
-                        alt={`Currency pair image ${index + 1}`}
-                        className={cn(
-                          "w-full h-full object-cover",
-                          "transition-transform duration-300",
-                          "group-hover:scale-105"
-                        )}
-                        loading="lazy"
-                      />
-                    </div>
-                  ))}
-                </div>
+                <ImageUploader pairId={pairId} onImageUpload={handleImageUploaded} />
+                <ImageGallery images={images} />
               </div>
             ) : (
               <div className="text-center text-gray-500 py-4">
