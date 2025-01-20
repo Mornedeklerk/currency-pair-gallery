@@ -3,7 +3,7 @@ import { ChevronDown, ChevronUp, X, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { saveCurrencyPair, saveImage, getImagesForPair } from "@/lib/db";
-import { useToast } from "./ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 interface CurrencyPairCardProps {
   onDelete: () => void;
@@ -27,13 +27,16 @@ export const CurrencyPairCard = ({ onDelete }: CurrencyPairCardProps) => {
     }
     
     try {
+      console.log("Saving currency pair:", currencyPair);
       const id = await saveCurrencyPair(currencyPair);
+      console.log("Currency pair saved with ID:", id);
       setPairId(id);
       toast({
         title: "Success",
         description: "Currency pair saved successfully. You can now upload images!",
       });
     } catch (error) {
+      console.error("Error saving currency pair:", error);
       toast({
         title: "Error",
         description: "Failed to save currency pair",
@@ -44,12 +47,18 @@ export const CurrencyPairCard = ({ onDelete }: CurrencyPairCardProps) => {
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (!files || !pairId) return;
+    if (!files || !pairId) {
+      console.log("No files selected or no pairId");
+      return;
+    }
 
     try {
+      console.log("Starting image upload for pairId:", pairId);
       for (const file of Array.from(files)) {
+        console.log("Processing file:", file.name);
         const blob = new Blob([await file.arrayBuffer()]);
         await saveImage(pairId, blob);
+        console.log("Image saved to DB");
         
         const imageUrl = URL.createObjectURL(file);
         setImages((prev) => [...prev, imageUrl]);
@@ -60,6 +69,7 @@ export const CurrencyPairCard = ({ onDelete }: CurrencyPairCardProps) => {
         description: "Images uploaded successfully",
       });
     } catch (error) {
+      console.error("Error uploading images:", error);
       toast({
         title: "Error",
         description: "Failed to upload images",
@@ -70,13 +80,19 @@ export const CurrencyPairCard = ({ onDelete }: CurrencyPairCardProps) => {
 
   useEffect(() => {
     if (pairId) {
+      console.log("Loading images for pairId:", pairId);
       const loadImages = async () => {
-        const savedImages = await getImagesForPair(pairId);
-        const imageUrls = savedImages.map((img: any) => {
-          const blob = new Blob([img.image_data]);
-          return URL.createObjectURL(blob);
-        });
-        setImages(imageUrls);
+        try {
+          const savedImages = await getImagesForPair(pairId);
+          console.log("Retrieved images:", savedImages);
+          const imageUrls = savedImages.map((img: any) => {
+            const blob = new Blob([img.image_data]);
+            return URL.createObjectURL(blob);
+          });
+          setImages(imageUrls);
+        } catch (error) {
+          console.error("Error loading images:", error);
+        }
       };
       loadImages();
     }
