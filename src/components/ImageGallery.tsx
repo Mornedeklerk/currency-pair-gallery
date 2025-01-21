@@ -1,8 +1,11 @@
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Save } from "lucide-react";
 import { ImageModal } from "./ImageModal";
 import { saveImageDescription, getDescriptionsForPair } from "@/lib/db";
+import { useToast } from "@/hooks/use-toast";
 
 interface ImageGalleryProps {
   images: string[];
@@ -12,6 +15,7 @@ interface ImageGalleryProps {
 export const ImageGallery = ({ images, pairId }: ImageGalleryProps) => {
   const [descriptions, setDescriptions] = useState<{ [key: string]: string }>({});
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     const loadDescriptions = async () => {
@@ -40,18 +44,30 @@ export const ImageGallery = ({ images, pairId }: ImageGalleryProps) => {
     return null;
   }
 
-  const handleDescriptionChange = async (imageUrl: string, description: string) => {
+  const handleDescriptionChange = (imageUrl: string, description: string) => {
+    setDescriptions(prev => ({
+      ...prev,
+      [imageUrl]: description
+    }));
+  };
+
+  const handleSaveDescription = async (imageUrl: string) => {
     try {
       console.log("Saving description for image:", imageUrl);
-      await saveImageDescription(pairId, imageUrl, description);
+      await saveImageDescription(pairId, imageUrl, descriptions[imageUrl] || "");
       console.log("Description saved successfully");
       
-      setDescriptions(prev => ({
-        ...prev,
-        [imageUrl]: description
-      }));
+      toast({
+        title: "Success",
+        description: "Description saved successfully",
+      });
     } catch (error) {
       console.error("Error saving description:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save description",
+        variant: "destructive",
+      });
     }
   };
 
@@ -81,12 +97,22 @@ export const ImageGallery = ({ images, pairId }: ImageGalleryProps) => {
                 loading="lazy"
               />
             </div>
-            <Textarea
-              placeholder="Add a description..."
-              value={descriptions[image] || ""}
-              onChange={(e) => handleDescriptionChange(image, e.target.value)}
-              className="min-h-[80px] resize-none"
-            />
+            <div className="flex gap-2">
+              <Textarea
+                placeholder="Add a description..."
+                value={descriptions[image] || ""}
+                onChange={(e) => handleDescriptionChange(image, e.target.value)}
+                className="min-h-[80px] resize-none flex-1"
+              />
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => handleSaveDescription(image)}
+                className="h-10 w-10"
+              >
+                <Save className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         ))}
       </div>
