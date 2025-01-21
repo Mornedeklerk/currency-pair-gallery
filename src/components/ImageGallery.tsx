@@ -16,11 +16,15 @@ export const ImageGallery = ({ images, pairId }: ImageGalleryProps) => {
   useEffect(() => {
     const loadDescriptions = async () => {
       try {
+        console.log("Loading descriptions for pairId:", pairId);
         const savedDescriptions = await getDescriptionsForPair(pairId);
+        console.log("Retrieved descriptions:", savedDescriptions);
+        
         const descriptionsMap = savedDescriptions.reduce((acc, desc) => ({
           ...acc,
           [desc.image_url]: desc.description
         }), {});
+        
         setDescriptions(descriptionsMap);
       } catch (error) {
         console.error("Error loading descriptions:", error);
@@ -37,13 +41,15 @@ export const ImageGallery = ({ images, pairId }: ImageGalleryProps) => {
   }
 
   const handleDescriptionChange = async (imageUrl: string, description: string) => {
-    setDescriptions(prev => ({
-      ...prev,
-      [imageUrl]: description
-    }));
-    
     try {
+      console.log("Saving description for image:", imageUrl);
       await saveImageDescription(pairId, imageUrl, description);
+      console.log("Description saved successfully");
+      
+      setDescriptions(prev => ({
+        ...prev,
+        [imageUrl]: description
+      }));
     } catch (error) {
       console.error("Error saving description:", error);
     }
