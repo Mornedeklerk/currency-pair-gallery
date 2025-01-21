@@ -1,14 +1,3 @@
-import Store from 'electron-store';
-
-const store = new Store({
-  name: 'currency-pairs-db', // This will create a JSON file in your user directory
-  defaults: {
-    currency_pairs: [],
-    images: [],
-    descriptions: []
-  }
-});
-
 interface CurrencyPair {
   id?: number;
   pair_name: string;
@@ -28,46 +17,80 @@ interface ImageDescription {
   description: string;
 }
 
+// Initialize IndexedDB
+const initDB = async () => {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('currency-pairs-db', 1);
+
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+
+    request.onupgradeneeded = (event) => {
+      const db = (event.target as IDBOpenDBRequest).result;
+
+      // Create object stores if they don't exist
+      if (!db.objectStoreNames.contains('currency_pairs')) {
+        db.createObjectStore('currency_pairs', { keyPath: 'id', autoIncrement: true });
+      }
+      if (!db.objectStoreNames.contains('images')) {
+        db.createObjectStore('images', { keyPath: 'id', autoIncrement: true });
+      }
+      if (!db.objectStoreNames.contains('descriptions')) {
+        db.createObjectStore('descriptions', { keyPath: 'id', autoIncrement: true });
+      }
+    };
+  });
+};
+
+// Helper function to perform IndexedDB operations
+const dbOperation = async (storeName: string, mode: IDBTransactionMode, operation: (store: IDBObjectStore) => void) => {
+  const db = await initDB() as IDBDatabase;
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(storeName, mode);
+    const store = transaction.objectStore(storeName);
+
+    transaction.oncomplete = () => {
+      db.close();
+      resolve(null);
+    };
+    transaction.onerror = () => reject(transaction.error);
+
+    operation(store);
+  });
+};
+
 export const saveCurrencyPair = async (pairName: string): Promise<number> => {
-  const pairs = store.get('currency_pairs') as CurrencyPair[];
-  const newId = pairs.length + 1;
-  const newPair = { id: newId, pair_name: pairName };
-  
-  store.set('currency_pairs', [...pairs, newPair]);
-  console.log('Saved currency pair to local storage:', newPair);
-  
-  return newId;
+  return new Promise((resolve, reject) => {
+    dbOperation('currency_pairs', 'readwrite', (store) => {
+      const request = store.add({ pair_name: pairName });
+      request.onsuccess = () => resolve(request.result as number);
+      request.onerror = () => reject(request.error);
+    });
+  });
 };
 
 export const saveImage = async (currencyPairId: number, imageData: Blob): Promise<void> => {
-  // Convert Blob to Base64 for storage
-  const base64 = await new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result);
-    reader.readAsDataURL(imageData);
+  await dbOperation('images', 'readwrite', (store) => {
+    store.add({
+      currency_pair_id: currencyPairId,
+      image_data: imageData,
+      created_at: new Date()
+    });
   });
-
-  const images = store.get('images') as any[];
-  const newImage = {
-    id: images.length + 1,
-    currency_pair_id: currencyPairId,
-    image_data: base64,
-    created_at: new Date()
-  };
-  
-  store.set('images', [...images, newImage]);
-  console.log('Saved image to local storage for pair:', currencyPairId);
 };
 
 export const getImagesForPair = async (currencyPairId: number): Promise<ImageData[]> => {
-  const images = store.get('images') as any[];
-  const pairImages = images.filter(img => img.currency_pair_id === currencyPairId);
-  
-  // Convert Base64 back to Blob
-  return pairImages.map(img => ({
-    ...img,
-    image_data: dataURLtoBlob(img.image_data)
-  }));
+  return new Promise((resolve, reject) => {
+    dbOperation('images', 'readonly', (store) => {
+      const request = store.getAll();
+      request.onsuccess = () => {
+        const allImages = request.result;
+        const pairImages = allImages.filter(img => img.currency_pair_id === currencyPairId);
+        resolve(pairImages);
+      };
+      request.onerror = () => reject(request.error);
+    });
+  });
 };
 
 export const saveImageDescription = async (
@@ -75,41 +98,35 @@ export const saveImageDescription = async (
   imageUrl: string,
   description: string
 ): Promise<void> => {
-  const descriptions = store.get('descriptions') as ImageDescription[];
-  const newDescription = {
-    id: descriptions.length + 1,
-    currency_pair_id: currencyPairId,
-    image_url: imageUrl,
-    description: description
-  };
-  
-  // Remove any existing description for this image
-  const filteredDescriptions = descriptions.filter(
-    desc => !(desc.currency_pair_id === currencyPairId && desc.image_url === imageUrl)
-  );
-  
-  store.set('descriptions', [...filteredDescriptions, newDescription]);
-  console.log('Saved description to local storage:', newDescription);
+  await dbOperation('descriptions', 'readwrite', (store) => {
+    store.add({
+      currency_pair_id: currencyPairId,
+      image_url: imageUrl,
+      description: description
+    });
+  });
 };
 
 export const getDescriptionsForPair = async (currencyPairId: number): Promise<ImageDescription[]> => {
-  const descriptions = store.get('descriptions') as ImageDescription[];
-  return descriptions.filter(desc => desc.currency_pair_id === currencyPairId);
+  return new Promise((resolve, reject) => {
+    dbOperation('descriptions', 'readonly', (store) => {
+      const request = store.getAll();
+      request.onsuccess = () => {
+        const allDescriptions = request.result;
+        const pairDescriptions = allDescriptions.filter(desc => desc.currency_pair_id === currencyPairId);
+        resolve(pairDescriptions);
+      };
+      request.onerror = () => reject(request.error);
+    });
+  });
 };
 
 export const getAllPairs = async (): Promise<CurrencyPair[]> => {
-  return store.get('currency_pairs') as CurrencyPair[];
+  return new Promise((resolve, reject) => {
+    dbOperation('currency_pairs', 'readonly', (store) => {
+      const request = store.getAll();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  });
 };
-
-// Helper function to convert Base64 data URL to Blob
-function dataURLtoBlob(dataURL: string): Blob {
-  const arr = dataURL.split(',');
-  const mime = arr[0].match(/:(.*?);/)?.[1];
-  const bstr = atob(arr[1]);
-  let n = bstr.length;
-  const u8arr = new Uint8Array(n);
-  while (n--) {
-    u8arr[n] = bstr.charCodeAt(n);
-  }
-  return new Blob([u8arr], { type: mime });
-}
