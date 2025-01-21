@@ -14,11 +14,18 @@ interface ImageData {
   created_at: Date;
 }
 
+interface ImageDescription {
+  id?: number;
+  currency_pair_id: number;
+  image_url: string;
+  description: string;
+}
+
 let db: IDBDatabase;
 
 const initDB = (): Promise<void> => {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    const request = indexedDB.open(DB_NAME, DB_VERSION + 1);
 
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {
@@ -45,6 +52,16 @@ const initDB = (): Promise<void> => {
           autoIncrement: true 
         });
         imagesStore.createIndex('currency_pair_id', 'currency_pair_id', { unique: false });
+      }
+
+      // Create descriptions store
+      if (!db.objectStoreNames.contains('descriptions')) {
+        const descriptionsStore = db.createObjectStore('descriptions', { 
+          keyPath: 'id', 
+          autoIncrement: true 
+        });
+        descriptionsStore.createIndex('currency_pair_id', 'currency_pair_id', { unique: false });
+        descriptionsStore.createIndex('image_url', 'image_url', { unique: false });
       }
     };
   });
@@ -88,6 +105,43 @@ export const getImagesForPair = async (currencyPairId: number): Promise<ImageDat
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(['images'], 'readonly');
     const store = transaction.objectStore('images');
+    const index = store.index('currency_pair_id');
+    
+    const request = index.getAll(currencyPairId);
+    
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+};
+
+export const saveImageDescription = async (
+  currencyPairId: number,
+  imageUrl: string,
+  description: string
+): Promise<void> => {
+  await initDB();
+  
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(['descriptions'], 'readwrite');
+    const store = transaction.objectStore('descriptions');
+    
+    const request = store.put({
+      currency_pair_id: currencyPairId,
+      image_url: imageUrl,
+      description: description
+    });
+    
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+};
+
+export const getDescriptionsForPair = async (currencyPairId: number): Promise<ImageDescription[]> => {
+  await initDB();
+  
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(['descriptions'], 'readonly');
+    const store = transaction.objectStore('descriptions');
     const index = store.index('currency_pair_id');
     
     const request = index.getAll(currencyPairId);

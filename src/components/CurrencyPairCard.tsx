@@ -1,10 +1,9 @@
-import { useState, useEffect } from "react";
-import { ChevronDown, ChevronUp, X } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { ChevronDown, ChevronUp, X, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { saveCurrencyPair, getImagesForPair } from "@/lib/db";
 import { useToast } from "@/hooks/use-toast";
-import { ImageUploader } from "./ImageUploader";
 import { ImageGallery } from "./ImageGallery";
 
 interface CurrencyPairCardProps {
@@ -17,6 +16,7 @@ export const CurrencyPairCard = ({ onDelete }: CurrencyPairCardProps) => {
   const [images, setImages] = useState<string[]>([]);
   const [pairId, setPairId] = useState<number | null>(null);
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSavePair = async () => {
     if (!currencyPair) {
@@ -47,8 +47,39 @@ export const CurrencyPairCard = ({ onDelete }: CurrencyPairCardProps) => {
     }
   };
 
-  const handleImageUploaded = (imageUrl: string) => {
-    setImages((prev) => [...prev, imageUrl]);
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0 || !pairId) return;
+
+    try {
+      for (const file of Array.from(files)) {
+        const fileReader = new FileReader();
+        fileReader.onload = async (e) => {
+          if (!e.target?.result) return;
+
+          const arrayBuffer = e.target.result as ArrayBuffer;
+          const blob = new Blob([arrayBuffer], { type: file.type });
+          
+          await saveImage(pairId, blob);
+          const imageUrl = URL.createObjectURL(blob);
+          setImages(prev => [...prev, imageUrl]);
+        };
+
+        fileReader.readAsArrayBuffer(file);
+      }
+
+      toast({
+        title: "Success",
+        description: "Images uploaded successfully",
+      });
+    } catch (error) {
+      console.error("Error uploading images:", error);
+      toast({
+        title: "Error",
+        description: "Failed to upload images",
+        variant: "destructive",
+      });
+    }
   };
 
   useEffect(() => {
@@ -97,7 +128,28 @@ export const CurrencyPairCard = ({ onDelete }: CurrencyPairCardProps) => {
               </Button>
             )}
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            {pairId && (
+              <>
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className={cn(
+                    "p-2 rounded-full transition-colors",
+                    "hover:bg-gray-100 text-gray-500 hover:text-gray-700"
+                  )}
+                >
+                  <Upload size={20} />
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={handleImageUpload}
+                />
+              </>
+            )}
             <button
               onClick={onDelete}
               className={cn(
@@ -127,8 +179,7 @@ export const CurrencyPairCard = ({ onDelete }: CurrencyPairCardProps) => {
           <div className="p-6 pt-0 animate-fade-in">
             {pairId ? (
               <div className="space-y-4">
-                <ImageUploader pairId={pairId} onImageUpload={handleImageUploaded} />
-                <ImageGallery images={images} />
+                <ImageGallery images={images} pairId={pairId} />
               </div>
             ) : (
               <div className="text-center text-gray-500 py-4">

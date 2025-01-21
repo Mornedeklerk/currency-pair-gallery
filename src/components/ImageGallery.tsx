@@ -1,25 +1,52 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
 import { ImageModal } from "./ImageModal";
+import { saveImageDescription, getDescriptionsForPair } from "@/lib/db";
 
 interface ImageGalleryProps {
   images: string[];
+  pairId: number;
 }
 
-export const ImageGallery = ({ images }: ImageGalleryProps) => {
+export const ImageGallery = ({ images, pairId }: ImageGalleryProps) => {
   const [descriptions, setDescriptions] = useState<{ [key: string]: string }>({});
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadDescriptions = async () => {
+      try {
+        const savedDescriptions = await getDescriptionsForPair(pairId);
+        const descriptionsMap = savedDescriptions.reduce((acc, desc) => ({
+          ...acc,
+          [desc.image_url]: desc.description
+        }), {});
+        setDescriptions(descriptionsMap);
+      } catch (error) {
+        console.error("Error loading descriptions:", error);
+      }
+    };
+    
+    if (pairId) {
+      loadDescriptions();
+    }
+  }, [pairId]);
 
   if (images.length === 0) {
     return null;
   }
 
-  const handleDescriptionChange = (imageUrl: string, description: string) => {
-    setDescriptions((prev) => ({
+  const handleDescriptionChange = async (imageUrl: string, description: string) => {
+    setDescriptions(prev => ({
       ...prev,
-      [imageUrl]: description,
+      [imageUrl]: description
     }));
+    
+    try {
+      await saveImageDescription(pairId, imageUrl, description);
+    } catch (error) {
+      console.error("Error saving description:", error);
+    }
   };
 
   return (
