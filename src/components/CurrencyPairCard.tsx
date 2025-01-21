@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { ChevronDown, ChevronUp, X, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
-import { saveCurrencyPair, getImagesForPair } from "@/lib/db";
+import { saveCurrencyPair, saveImage, getImagesForPair } from "@/lib/db";
 import { useToast } from "@/hooks/use-toast";
 import { ImageGallery } from "./ImageGallery";
 
