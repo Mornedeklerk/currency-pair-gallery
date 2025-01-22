@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 import { CurrencyPairCard } from "./CurrencyPairCard";
 import { cn } from "@/lib/utils";
+import { Button } from "./ui/button";
 
 export const CurrencyPairList = () => {
   const [cards, setCards] = useState([0]);
@@ -15,7 +16,7 @@ export const CurrencyPairList = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6">
       {cards.length === 0 ? (
         <div className="text-center text-gray-500 mb-4">
           Click the button below to add your first currency pair
@@ -31,8 +32,9 @@ export const CurrencyPairList = () => {
         </div>
       )}
       
-      <button
+      <Button
         onClick={addCard}
+        variant="outline"
         className={cn(
           "w-full p-4 rounded-xl border border-dashed",
           "border-gray-200 text-gray-500",
@@ -44,7 +46,7 @@ export const CurrencyPairList = () => {
       >
         <Plus size={20} />
         <span>Add Currency Pair</span>
-      </button>
+      </Button>
     </div>
   );
 };
