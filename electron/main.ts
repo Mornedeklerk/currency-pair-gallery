@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
+import path from 'node:path';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -12,7 +12,7 @@ if (!fs.existsSync(appDataPath)) {
   fs.mkdirSync(appDataPath, { recursive: true });
 }
 
-function createWindow() {
+async function createWindow() {
   const mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -22,13 +22,11 @@ function createWindow() {
     }
   });
 
-  // In development, load from the Vite dev server
   if (process.env.NODE_ENV === 'development') {
-    mainWindow.loadURL('http://localhost:8080');
+    await mainWindow.loadURL('http://localhost:8080');
     mainWindow.webContents.openDevTools();
   } else {
-    // In production, load the built files
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+    await mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }
 }
 
@@ -48,33 +46,53 @@ app.on('activate', () => {
 
 // Handle saving data
 ipcMain.handle('save-data', async (_, { type, data, id }) => {
-  const filePath = path.join(appDataPath, `${type}_${id}.json`);
-  fs.writeFileSync(filePath, JSON.stringify(data));
-  return true;
+  try {
+    const filePath = path.join(appDataPath, `${type}_${id}.json`);
+    fs.writeFileSync(filePath, JSON.stringify(data));
+    return true;
+  } catch (error) {
+    console.error('Error saving data:', error);
+    return false;
+  }
 });
 
 // Handle loading data
 ipcMain.handle('load-data', async (_, { type, id }) => {
-  const filePath = path.join(appDataPath, `${type}_${id}.json`);
-  if (fs.existsSync(filePath)) {
-    const data = fs.readFileSync(filePath, 'utf-8');
-    return JSON.parse(data);
+  try {
+    const filePath = path.join(appDataPath, `${type}_${id}.json`);
+    if (fs.existsSync(filePath)) {
+      const data = fs.readFileSync(filePath, 'utf-8');
+      return JSON.parse(data);
+    }
+    return null;
+  } catch (error) {
+    console.error('Error loading data:', error);
+    return null;
   }
-  return null;
 });
 
 // Handle saving images
 ipcMain.handle('save-image', async (_, { id, imageData }) => {
-  const filePath = path.join(appDataPath, `image_${id}.png`);
-  fs.writeFileSync(filePath, Buffer.from(imageData));
-  return true;
+  try {
+    const filePath = path.join(appDataPath, `image_${id}.png`);
+    fs.writeFileSync(filePath, Buffer.from(imageData));
+    return true;
+  } catch (error) {
+    console.error('Error saving image:', error);
+    return false;
+  }
 });
 
 // Handle loading images
 ipcMain.handle('load-images', async (_, { id }) => {
-  const filePath = path.join(appDataPath, `image_${id}.png`);
-  if (fs.existsSync(filePath)) {
-    return fs.readFileSync(filePath);
+  try {
+    const filePath = path.join(appDataPath, `image_${id}.png`);
+    if (fs.existsSync(filePath)) {
+      return fs.readFileSync(filePath);
+    }
+    return null;
+  } catch (error) {
+    console.error('Error loading image:', error);
+    return null;
   }
-  return null;
 });
