@@ -1,4 +1,5 @@
-const { ipcRenderer } = window.require('electron');
+// @ts-ignore
+const { ipcRenderer } = window.electron;
 
 export const saveCurrencyPair = async (pair: string) => {
   const id = Date.now();
