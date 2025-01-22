@@ -1,7 +1,12 @@
 // @ts-ignore
-const { ipcRenderer } = window.electron;
+const { ipcRenderer } = window.electron || {};
 
 export const saveCurrencyPair = async (pair: string) => {
+  if (!ipcRenderer) {
+    console.log('IPC not available - running in development mode');
+    return Date.now();
+  }
+  
   const id = Date.now();
   await ipcRenderer.invoke('save-data', {
     type: 'pair',
@@ -12,6 +17,11 @@ export const saveCurrencyPair = async (pair: string) => {
 };
 
 export const saveImage = async (pairId: number, imageBlob: Blob) => {
+  if (!ipcRenderer) {
+    console.log('IPC not available - running in development mode');
+    return true;
+  }
+
   const arrayBuffer = await imageBlob.arrayBuffer();
   await ipcRenderer.invoke('save-image', {
     id: pairId,
@@ -21,6 +31,11 @@ export const saveImage = async (pairId: number, imageBlob: Blob) => {
 };
 
 export const getImagesForPair = async (pairId: number) => {
+  if (!ipcRenderer) {
+    console.log('IPC not available - running in development mode');
+    return [];
+  }
+
   const imageData = await ipcRenderer.invoke('load-images', { id: pairId });
   if (!imageData) return [];
   
@@ -29,6 +44,11 @@ export const getImagesForPair = async (pairId: number) => {
 };
 
 export const saveImageDescription = async (pairId: number, imageUrl: string, description: string) => {
+  if (!ipcRenderer) {
+    console.log('IPC not available - running in development mode');
+    return true;
+  }
+
   await ipcRenderer.invoke('save-data', {
     type: 'description',
     id: `${pairId}_${imageUrl}`,
@@ -38,6 +58,11 @@ export const saveImageDescription = async (pairId: number, imageUrl: string, des
 };
 
 export const getDescriptionsForPair = async (pairId: number) => {
+  if (!ipcRenderer) {
+    console.log('IPC not available - running in development mode');
+    return [];
+  }
+
   const descriptions = await ipcRenderer.invoke('load-data', {
     type: 'description',
     id: pairId
